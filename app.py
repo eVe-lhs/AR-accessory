@@ -9,10 +9,11 @@ from bson.objectid import ObjectId  # For handling MongoDB ObjectId
 
 app = Flask(__name__)
 app.secret_key = "secret_key_for_flash_messages"
-ACCESSORY_PATH = "static/accessories"
+ACCESSORY_PATH = os.environ.get('ACCESSORY_PATH', 'static/accessories')
 
 # MongoDB connection
-client = MongoClient("mongodb://localhost:27017")
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
 db = client['accessory_db']  # Database name
 accessories_collection = db['accessories']  # Collection name
 
