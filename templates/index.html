@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1 class="text-center">Face Accessory Try-On</h1>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-5 text-center">
+            <a href="{{ url_for('register_accessory') }}" class="btn btn-primary btn-lg">Register Accessory</a>
+        </div>
+        <div class="col-md-5 text-center">
+            <a href="{{ url_for('try_on') }}" class="btn btn-success btn-lg">Try On Accessories</a>
+        </div>
+    </div>
+{% endblock %}

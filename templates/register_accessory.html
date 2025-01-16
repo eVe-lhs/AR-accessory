@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1 class="text-center">Register Accessory</h1>
+    <form method="POST" enctype="multipart/form-data" class="mt-4">
+        <div class="form-group">
+            <label for="name">Accessory Name</label>
+            <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="type">Accessory Type</label>
+            <select id="type" name="type" class="form-control" required>
+                <option value="headwear">Head Wear</option>
+                <option value="glasses">Glasses</option>
+                <option value="necklace">Necklace</option>
+            </select>
+        </div>
+
+        <!-- Image Upload or Drawing Mode -->
+        <div class="form-group">
+            <label>Accessory Image (PNG)</label>
+            <div class="custom-control custom-radio">
+                <input type="radio" id="upload" name="image_option" class="custom-control-input" checked>
+                <label class="custom-control-label" for="upload">Upload Image</label>
+            </div>
+            <div class="custom-control custom-radio">
+                <input type="radio" id="draw" name="image_option" class="custom-control-input">
+                <label class="custom-control-label" for="draw">Draw Image</label>
+            </div>
+        </div>
+
+        <!-- Image Upload Field -->
+        <div id="upload-image" class="form-group">
+            <input type="file" id="image" name="image" accept="image/png" class="form-control-file">
+        </div>
+
+        <!-- Drawing Canvas with Toolbar -->
+        <div id="drawing-canvas" class="form-group" style="display: none;">
+            <label for="canvas">Draw Accessory</label>
+            <div>
+                <button type="button" onclick="changeColor('black')">Black</button>
+                <button type="button" onclick="changeColor('red')">Red</button>
+                <button type="button" onclick="changeColor('blue')">Blue</button>
+                <button type="button" onclick="changeWidth(5)">Width 5</button>
+                <button type="button" onclick="changeWidth(10)">Width 10</button>
+                <button type="button" onclick="clearCanvas()">Clear</button>
+                <button type="button" onclick="erase()">Eraser</button>
+            </div>
+            <canvas id="canvas" width="500" height="500" style="border: 1px solid #000;"></canvas>
+            <div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="saveCanvas()">Save Drawing</button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="register-button" disabled>Register</button>
+        <input type="hidden" id="image_data" name="image_data">
+    </form>
+
+    <script>
+        // JavaScript for drawing and handling canvas
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let color = 'black';
+        let width = 5;
+        let isErasing = false;
+        let drawingSaved = false; // Flag to check if drawing is saved
+
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing) {
+                if (isErasing) {
+                    ctx.clearRect(e.offsetX - width / 2, e.offsetY - width / 2, width, width);
+                } else {
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = width;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        // Change stroke color
+        function changeColor(newColor) {
+            color = newColor;
+        }
+
+        // Change stroke width
+        function changeWidth(newWidth) {
+            width = newWidth;
+        }
+
+        // Clear the canvas
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Enable eraser
+        function erase() {
+            isErasing = !isErasing;
+        }
+
+        // Save the canvas as base64 image
+        function saveCanvas() {
+            const imageData = canvas.toDataURL('image/png');
+            document.getElementById('image_data').value = imageData;
+            drawingSaved = true; // Mark drawing as saved
+            document.getElementById('register-button').disabled = false; // Enable Register button
+        }
+
+        // Toggle between upload and draw modes
+        const imageOptionRadios = document.getElementsByName('image_option');
+        imageOptionRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.id === 'upload') {
+                    document.getElementById('upload-image').style.display = 'block';
+                    document.getElementById('drawing-canvas').style.display = 'none';
+                    document.getElementById('register-button').disabled = false; // Enable Register button for upload
+                } else {
+                    document.getElementById('upload-image').style.display = 'none';
+                    document.getElementById('drawing-canvas').style.display = 'block';
+                    document.getElementById('register-button').disabled = true; // Disable Register button until saved
+                }
+            });
+        });
+    </script>
+{% endblock %}

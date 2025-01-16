@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="text-center">Edit Accessory</h1>
+<div class="container mt-4">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="name" class="form-label">Accessory Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ accessory.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="type" class="form-label">Accessory Type</label>
+            <select class="form-select" id="type" name="type" required>
+                <option value="headwear" {% if accessory.type == 'headwear' %}selected{% endif %}>Headwear</option>
+                <option value="glasses" {% if accessory.type == 'glasses' %}selected{% endif %}>Glasses</option>
+                <option value="necklace" {% if accessory.type == 'necklace' %}selected{% endif %}>Necklace</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="image" class="form-label">Upload New Image (Optional)</label>
+            <input type="file" class="form-control" id="image" name="image">
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">Save Changes</button>
+            <a href="{{ url_for('manage_accessories') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
