@@ -5,11 +5,19 @@ from PIL import Image
 from io import BytesIO
 import base64
 from bson.objectid import ObjectId  # For handling MongoDB ObjectId
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
+# Cloudinary Configuration
+cloudinary.config(
+    cloud_name='drpup6lci',
+    api_key='191398282626259',
+    api_secret='9p65Sb30nyjMv7R5vb8LnmleZ3U'
+)
 
 app = Flask(__name__)
 app.secret_key = "secret_key_for_flash_messages"
-ACCESSORY_PATH = os.environ.get('ACCESSORY_PATH', 'static/accessories')
 
 # MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI")
@@ -49,20 +57,24 @@ def register_accessory():
                 # Convert base64 to image
                 img_data = base64.b64decode(image_data.split(',')[1])
                 img = Image.open(BytesIO(img_data))
-                file_path = os.path.join(ACCESSORY_PATH, f"{name}.png")
-                img.save(file_path)
+                img.save('temp_image.png')
+
+                # Upload to Cloudinary
+                result = cloudinary.uploader.upload('temp_image.png')
+                cloudinary_image_url = result['url']
+                os.remove('temp_image.png')  # Clean up the temporary file
 
             else:
-                # If file upload exists, save the uploaded image
+                # If file upload exists, save the uploaded image to Cloudinary
                 file = request.files['image']
-                file_path = os.path.join(ACCESSORY_PATH, file.filename)
-                file.save(file_path)
+                result = cloudinary.uploader.upload(file)
+                cloudinary_image_url = result['url']
 
             # Insert the accessory into MongoDB
             accessories_collection.insert_one({
                 'name': name,
                 'type': type_of_accessory,
-                'image': file.filename if not image_data else f"{name}.png"
+                'image': cloudinary_image_url
             })
             flash("Accessory registered successfully!", "success")
             return redirect(url_for('index'))
@@ -107,12 +119,11 @@ def edit_accessory(id):
             # Update accessory details
             update_data = {"name": name, "type": type_of_accessory}
 
-            # Handle new image upload
+            # Handle new image upload to Cloudinary
             if 'image' in request.files and request.files['image'].filename:
                 file = request.files['image']
-                file_path = os.path.join(ACCESSORY_PATH, file.filename)
-                file.save(file_path)
-                update_data['image'] = file.filename
+                result = cloudinary.uploader.upload(file)
+                update_data['image'] = result['url']
 
             accessories_collection.update_one(
                 {"_id": ObjectId(id)}, {"$set": update_data})
@@ -128,10 +139,9 @@ def edit_accessory(id):
 def delete_accessory(id):
     accessory = accessories_collection.find_one({"_id": ObjectId(id)})
     if accessory:
-        # Delete the image file
-        image_path = os.path.join(ACCESSORY_PATH, accessory['image'])
-        if os.path.exists(image_path):
-            os.remove(image_path)
+        # Remove the image from Cloudinary
+        cloudinary.uploader.destroy(
+            accessory['image'].split("/")[-1].split(".")[0])
 
         # Remove accessory from the database
         accessories_collection.delete_one({"_id": ObjectId(id)})
@@ -142,6 +152,4 @@ def delete_accessory(id):
 
 
 if __name__ == '__main__':
-    if not os.path.exists(ACCESSORY_PATH):
-        os.makedirs(ACCESSORY_PATH)  # Create directory for storing images
     app.run(debug=True)
