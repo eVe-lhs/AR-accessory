@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Always draw accessories for faces if any exist
       if (result.faces && result.faces.length > 0 && selectedAccessory) {
-        result.faces.forEach(([top, right, bottom, left]) => {
+        result.faces.slice(0, 3).forEach(([top, right, bottom, left]) => {
           const width = right - left;
           const height = bottom - top;
 

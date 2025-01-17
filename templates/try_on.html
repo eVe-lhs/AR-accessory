@@ -174,31 +174,40 @@
     });
 
     // Process the video feed
-    video.addEventListener("play", () => {
-      const displaySize = {
-        width: video.videoWidth,
-        height: video.videoHeight,
-      };
+    // Process the video feed
+video.addEventListener("play", () => {
+  const displaySize = {
+    width: video.videoWidth,
+    height: video.videoHeight,
+  };
 
-      // Run detection and draw accessories periodically
-      setInterval(async () => {
-        const detections = await faceapi
-          .detectAllFaces(video)
-          .withFaceLandmarks();
+  async function renderAccessories() {
+    const detections = await faceapi
+      .detectAllFaces(video)
+      .withFaceLandmarks();
 
-        const resizedDetections = faceapi.resizeResults(
-          detections,
-          displaySize
-        );
+    const resizedDetections = faceapi.resizeResults(
+      detections,
+      displaySize
+    );
 
-        // Clear the canvas and prepare for drawing
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear the canvas and prepare for drawing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (detections.length > 0) {
-          overlayAccessory(ctx, resizedDetections[0], displaySize);
-        }
-      }, 100);
-    });
+    // Draw accessories for up to 3 faces
+    for (let i = 0; i < Math.min(detections.length, 3); i++) {
+      const detection = resizedDetections[i];
+      overlayAccessory(ctx, detection, displaySize);
+    }
+
+    // Continue rendering for the next frame
+    requestAnimationFrame(renderAccessories);
+  }
+
+  // Start rendering
+  renderAccessories();
+});
+
 
     // Handle accessory selection
     window.tryOnAccessory = function (name, type, image) {
@@ -222,9 +231,6 @@
         const yScale = canvas.height / video.videoHeight;
         const faceScaleFactor = faceBox.width / 80;
 
-        const accessoryWidth = 150 * xScale * faceScaleFactor;
-        const accessoryHeight = 100 * yScale * faceScaleFactor;
-
         ctx.save();
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
@@ -233,51 +239,63 @@
           const leftEye = landmarks.getLeftEye()[0];
           const rightEye = landmarks.getRightEye()[3];
 
-          const foreheadX = ((leftEye.x + rightEye.x) / 2 - 10) * xScale;
-          const foreheadY = (leftEye.y - 90) * yScale;
+          // Position for headwear (centered on forehead)
+          const foreheadX = ((leftEye.x + rightEye.x) / 2) * xScale;
+          const foreheadY = (leftEye.y - 10) * yScale;
 
+          const accessoryWidth = 150 * xScale * faceScaleFactor;
+          const accessoryHeight = 100 * yScale * faceScaleFactor;
+
+          // Draw accessory with middle bottom origin
           ctx.drawImage(
             accessoryImage,
-            foreheadX - accessoryWidth / 2,
-            foreheadY - accessoryHeight / 2,
+            foreheadX - accessoryWidth / 2, // Center horizontally
+            foreheadY - accessoryHeight, // Align bottom to forehead position
             accessoryWidth,
             accessoryHeight
           );
-        } else if (selectedAccessory.type === "glasses") {
+        }
+        if (selectedAccessory.type === "glasses") {
           const leftEye = landmarks.getLeftEye()[0];
           const rightEye = landmarks.getRightEye()[3];
 
-          // Calculate the position relative to the eyes
-          const glassesX = ((leftEye.x + rightEye.x) / 2) * xScale; // Center over eyes
-          const glassesY = ((leftEye.y + rightEye.y + 10) / 2) * yScale; // Center vertically between eyes
+          // Calculate the distance between the eyes
+          const eyeDistance = Math.sqrt(
+            Math.pow(rightEye.x - leftEye.x, 2) +
+              Math.pow(rightEye.y - leftEye.y, 2)
+          );
 
-          const glassesWidth =
-            (rightEye.x - leftEye.x - 20) * xScale * faceScaleFactor; // Adjust glasses width
-          const glassesHeight = 40 * yScale * faceScaleFactor; // Scale glasses height
+          // Position for glasses (centered over eyes)
+          const glassesX = ((leftEye.x + rightEye.x) / 2) * xScale;
+          const glassesY = ((leftEye.y + rightEye.y) / 2) * yScale + 5;
 
-          // Center the glasses and apply the size
+          // Scale the glasses based on the distance between the eyes
+          const glassesWidth = eyeDistance * 1.5 * xScale; // Adjust multiplier for desired width
+          const glassesHeight = eyeDistance * 0.7 * yScale; // Adjust multiplier for desired height
+
+          // Draw glasses with middle bottom origin
           ctx.drawImage(
             accessoryImage,
-            glassesX - glassesWidth / 2,
-            glassesY - glassesHeight / 2,
+            glassesX - glassesWidth / 2, // Center horizontally
+            glassesY - glassesHeight / 2, // Center vertically
             glassesWidth,
             glassesHeight
           );
         } else if (selectedAccessory.type === "necklace") {
           const jawline = landmarks.getJawOutline();
 
-          // Calculate the position relative to the jawline
-          const necklaceX = (jawline[6].x +15) * xScale; // Slightly left of chin
-          const necklaceY = (jawline[6].y + 30) * yScale; // Below chin
+          // Position for necklace (below the chin)
+          const necklaceX = jawline[8].x * xScale; // Chin position
+          const necklaceY = (jawline[8].y + 20) * yScale; // Below chin
 
-          const necklaceWidth = 80 * xScale * faceScaleFactor; // Scale necklace width
-          const necklaceHeight = 55 * yScale * faceScaleFactor; // Scale necklace height
+          const necklaceWidth = 100 * xScale * faceScaleFactor;
+          const necklaceHeight = 60 * yScale * faceScaleFactor;
 
-          // Center the necklace and apply the size
+          // Draw necklace with middle bottom origin
           ctx.drawImage(
             accessoryImage,
-            necklaceX - necklaceWidth / 2,
-            necklaceY - necklaceHeight / 2,
+            necklaceX - necklaceWidth / 2, // Center horizontally
+            necklaceY - necklaceHeight / 2, // Align bottom to chin position
             necklaceWidth,
             necklaceHeight
           );
@@ -295,14 +313,17 @@
       captureCanvas.width = video.videoWidth;
       captureCanvas.height = video.videoHeight;
 
-      // Draw video frame
+      // Draw video frame flipped in x direction
+      captureCtx.save();
+      captureCtx.scale(-1, 1);
       captureCtx.drawImage(
         video,
-        0,
+        -captureCanvas.width,
         0,
         captureCanvas.width,
         captureCanvas.height
       );
+      captureCtx.restore();
 
       // Draw the accessory overlay
       captureCtx.drawImage(
